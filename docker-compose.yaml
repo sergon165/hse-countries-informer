@@ -1,0 +1,74 @@
+version: '3.9'
+
+services:
+  # основное приложение
+  app:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/src
+      - ./docs:/docs
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - .env
+
+  # база данных
+  db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+
+  # Redis
+  redis: 
+    image: redis:7-alpine
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - "6379:6379"
+
+  # сервис распределенной очереди задач
+  celery:
+    build: .
+    command: celery -A app worker --loglevel=info
+    volumes:
+      - ./src:/src
+    depends_on:
+      - redis
+      - db
+      - app
+    env_file:
+      - .env
+
+  # сервис для выполнения периодических заданий
+  celery-beat:
+    build: .
+    command: celery -A app beat -l info -S django --pidfile=/tmp/celerybeat.pid --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - ./src:/src
+    depends_on:
+      - redis
+      - db
+      - app
+      - celery
+    env_file:
+      - .env
+    tmpfs: /tmp
+
+  # мониторинг периодических задач
+  flower:
+    image: mher/flower:0.9.7
+    command: ["flower", "--broker=redis://redis:6379", "--port=5555"]
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
