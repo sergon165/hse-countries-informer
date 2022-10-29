@@ -4,7 +4,7 @@ from typing import Any
 from django.core.cache import caches
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
 
 from app.settings import CACHE_WEATHER
@@ -18,6 +18,7 @@ from geo.services.weather import WeatherService
 def get_cities(request: Request, name: str) -> JsonResponse:
     """
     Получить информацию о городах по названию.
+
     Сначала метод ищет данные в БД. Если данные не найдены, то делается запрос к API.
     После получения данных от API они сохраняются в БД.
 
@@ -35,9 +36,10 @@ def get_cities(request: Request, name: str) -> JsonResponse:
 
 
 @api_view(["GET"])
-def get_countries(request: Request, name: str) -> JsonResponse:
+def get_country(request: Request, name: str) -> JsonResponse:
     """
     Получение информации о странах по названию.
+
     Сначала метод ищет данные в БД. Если данные не найдены, то делается запрос к API.
     После получения данных от API они сохраняются в БД.
 
@@ -52,6 +54,32 @@ def get_countries(request: Request, name: str) -> JsonResponse:
         return JsonResponse(serializer.data, safe=False)
 
     raise NotFound
+
+
+@api_view(["GET"])
+def get_countries(request: Request) -> JsonResponse:
+    """
+    Получение информации о странах с фильтрацией по их ISO Alpha2 коду страны.
+
+    :param Request request: Объект запроса
+    :return:
+    """
+
+    codes_set = set()
+    if codes := request.query_params.getlist("codes"):
+        codes_set = {code.strip() for code in codes if code.strip().isalpha()}
+
+    if not codes_set:
+        raise ValidationError(
+            {"codes": "Не переданы ISO Alpha2 коды стран для поиска."}
+        )
+
+    if countries := CountryService().get_countries_by_codes(codes_set):
+        serializer = CountrySerializer(countries, many=True)
+
+        return JsonResponse(serializer.data, safe=False)
+
+    return JsonResponse([], safe=False)
 
 
 @api_view(["GET"])

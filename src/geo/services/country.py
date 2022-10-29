@@ -45,6 +45,7 @@ class CountryService:
         :param name: Название страны
         :return:
         """
+
         if (
             data := Country.objects.filter(alpha2code__isnull=False)
             .annotate(alpha2code_lower=Lower("alpha2code"))
@@ -53,6 +54,22 @@ class CountryService:
             return {item["alpha2code_lower"]: item["pk"] for item in data}
 
         return None
+
+    def get_countries_by_codes(self, codes: set[str]) -> QuerySet:
+        """
+        Получение списка стран по их ISO Alpha2 кодам.
+
+        :param codes: Множество ISO Alpha2 кодов стран.
+        :return:
+        """
+
+        alpha2codes = [code.lower() for code in codes]
+
+        return (
+            Country.objects.annotate(alpha2code_lower=Lower("alpha2code"))
+            .filter(alpha2code_lower__in=alpha2codes)
+            .all()
+        )
 
     def build_model(self, country: CountryDTO) -> Country:
         """
