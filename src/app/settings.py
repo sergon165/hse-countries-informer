@@ -131,6 +131,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # настройки логирования
 LOGGING = {
     "version": 1,
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        }
+    },
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
@@ -139,18 +144,18 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "INFO",
+            "level": "DEBUG",
             "class": "logging.StreamHandler",
             "stream": sys.stdout,
             "formatter": "verbose",
+            "filters": ["require_debug_true"],
         },
     },
     "loggers": {
-        "": {
+        "django.db.backends": {
+            "level": "DEBUG",
             "handlers": ["console"],
-            "level": "INFO",
-            "propagate": True,
-        },
+        }
     },
 }
 

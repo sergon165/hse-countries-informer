@@ -1,11 +1,13 @@
 from typing import Set
 
 from django.db.models import Q, QuerySet
+from django.db.models.functions import Lower
 
 from geo.clients.geo import GeoClient
 from geo.clients.shemas import CityDTO
 from geo.models import Country, City
 from geo.services.country import CountryService
+from geo.services.shemas import CountryCityDTO
 
 
 class CityService:
@@ -70,6 +72,33 @@ class CityService:
                     )
 
         return cities_db
+
+    @staticmethod
+    def get_cities_by_codes(codes: set[CountryCityDTO]) -> QuerySet:
+        """
+        Получение списка городов по ISO Alpha2 кодам стран и названиям городов.
+
+        :param codes: Множество ISO Alpha2 кодов стран и названий городов.
+        :return:
+        """
+
+        queries = [
+            Q(city_name_lower=code.city) & Q(country_alpha2code_lower=code.alpha2code)
+            for code in codes
+        ]
+        conditions = queries.pop()
+        for query in queries:
+            conditions |= query
+
+        return (
+            City.objects.annotate(
+                city_name_lower=Lower("name"),
+                country_alpha2code_lower=Lower("country__alpha2code"),
+            )
+            .filter(conditions)
+            .select_related("country")
+            .all()
+        )
 
     def build_model(self, city: CityDTO, country_id: int) -> City:
         """

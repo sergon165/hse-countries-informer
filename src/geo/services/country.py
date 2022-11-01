@@ -38,7 +38,8 @@ class CountryService:
 
         return countries
 
-    def get_countries_codes(self) -> Optional[Dict[str, int]]:
+    @staticmethod
+    def get_countries_codes() -> Optional[Dict[str, int]]:
         """
         Получение списка ISO Alpha2 кодов стран.
 
@@ -55,7 +56,8 @@ class CountryService:
 
         return None
 
-    def get_countries_by_codes(self, codes: set[str]) -> QuerySet:
+    @staticmethod
+    def get_countries_by_codes(codes: set[str]) -> QuerySet:
         """
         Получение списка стран по их ISO Alpha2 кодам.
 

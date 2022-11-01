@@ -1,4 +1,5 @@
 """Представления Django"""
+import re
 from typing import Any
 
 from django.core.cache import caches
@@ -11,11 +12,12 @@ from app.settings import CACHE_WEATHER
 from geo.serializers import CountrySerializer, CitySerializer
 from geo.services.city import CityService
 from geo.services.country import CountryService
+from geo.services.shemas import CountryCityDTO
 from geo.services.weather import WeatherService
 
 
 @api_view(["GET"])
-def get_cities(request: Request, name: str) -> JsonResponse:
+def get_city(request: Request, name: str) -> JsonResponse:
     """
     Получить информацию о городах по названию.
 
@@ -33,6 +35,40 @@ def get_cities(request: Request, name: str) -> JsonResponse:
         return JsonResponse(serializer.data, safe=False)
 
     raise NotFound
+
+
+@api_view(["GET"])
+def get_cities(request: Request) -> JsonResponse:
+    """
+    Получение информации о городах с фильтрацией по ISO Alpha2 коду страны и названию города.
+
+    :param Request request: Объект запроса
+    :return:
+    """
+
+    codes_set = set()
+    if codes := request.query_params.getlist("codes"):
+        if any(not re.match(r"\w{2},\w{2,50}", code) for code in codes):
+            raise ValidationError({"codes": "Коды переданы в некорректном формате."})
+
+        codes_set = {
+            CountryCityDTO(alpha2code=alpha2code, city=city)
+            for (alpha2code, city) in (code.split(",") for code in codes)
+        }
+
+    if not codes_set:
+        raise ValidationError(
+            {
+                "codes": "Не переданы ISO Alpha2 коды стран и названия городов для поиска."
+            }
+        )
+
+    if cities := CityService().get_cities_by_codes(codes_set):
+        serializer = CitySerializer(cities, many=True)
+
+        return JsonResponse(serializer.data, safe=False)
+
+    return JsonResponse([], safe=False)
 
 
 @api_view(["GET"])
