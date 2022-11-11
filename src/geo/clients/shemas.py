@@ -1,6 +1,7 @@
 """
 Описание моделей данных (DTO).
 """
+from typing import Optional
 
 from pydantic import Field, BaseModel
 
@@ -139,7 +140,7 @@ class CityDTO(BaseModel):
     """
 
     name: str
-    state_or_region: str
+    state_or_region: Optional[str]
     country: CountryShortDTO
     latitude: float
     longitude: float

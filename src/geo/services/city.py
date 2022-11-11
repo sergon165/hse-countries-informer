@@ -112,7 +112,7 @@ class CityService:
         return City(
             country_id=country_id,  # связь по внешнему ключу
             name=city.name,
-            region=city.state_or_region,
+            region=city.state_or_region if city.state_or_region else "",
             latitude=city.latitude,
             longitude=city.longitude,
         )

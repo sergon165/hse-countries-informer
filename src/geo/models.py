@@ -81,10 +81,7 @@ class City(TimeStampMixin):
         verbose_name="Страна",
     )
     name = models.CharField(max_length=50, verbose_name="Название города")
-    region = models.CharField(
-        max_length=50,
-        verbose_name="Регион",
-    )
+    region = models.CharField(max_length=50, verbose_name="Регион", blank=True)
     latitude = models.FloatField(
         verbose_name="Широта",
     )

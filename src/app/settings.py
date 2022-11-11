@@ -131,11 +131,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # настройки логирования
 LOGGING = {
     "version": 1,
-    "filters": {
-        "require_debug_true": {
-            "()": "django.utils.log.RequireDebugTrue",
-        }
-    },
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
@@ -144,16 +139,15 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
+            "level": "INFO",
             "class": "logging.StreamHandler",
             "stream": sys.stdout,
             "formatter": "verbose",
-            "filters": ["require_debug_true"],
         },
     },
     "loggers": {
-        "django.db.backends": {
-            "level": "DEBUG",
+        "": {
+            "level": "INFO",
             "handlers": ["console"],
         }
     },
@@ -162,7 +156,7 @@ LOGGING = {
 # настройки кэширования
 REDIS_HOST = env("REDIS_HOST")
 REDIS_PORT = env("REDIS_PORT")
-BROKER_URL = f"redis://redis:{REDIS_PORT}/"
+BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/"
 
 # время актуальности данных о курсах валют (в секундах), по умолчанию – сутки
 CACHE_TTL_CURRENCY_RATES: int = int(os.getenv("CACHE_TTL_CURRENCY_RATES", "86_400"))
@@ -172,11 +166,13 @@ CACHE_TTL_WEATHER: int = int(os.getenv("CACHE_TTL_WEATHER", "10_700"))
 CACHE_WEATHER = "cache_weather"
 CACHE_CURRENCY = "cache_currency"
 CACHES = {
+    # общий кэш приложения
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": BROKER_URL,
         "OPTIONS": {"db": "0"},
     },
+    # кэширование данных о погоде
     CACHE_WEATHER: {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": BROKER_URL,
@@ -184,6 +180,7 @@ CACHES = {
         "OPTIONS": {"db": "1"},
         "TIMEOUT": CACHE_TTL_WEATHER,
     },
+    # кэширование данных о курсах валют
     CACHE_CURRENCY: {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": BROKER_URL,
@@ -194,12 +191,21 @@ CACHES = {
 }
 
 # настройки для Celery
-CELERY_BROKER_URL = f"redis://redis:{REDIS_PORT}/0"
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+
+# строка подключения к RabbitMQ
+RABBITMQ_URI = os.getenv(
+    "RABBITMQ_URI", "amqp://user:secret@countries-informer-rabbitmq:5672"
+)
+# название очереди для импорта гео-данных
+RABBITMQ_QUEUE_PLACES_IMPORT = os.getenv(
+    "RABBITMQ_QUEUE_PLACES_IMPORT", "places_import"
+)
 
 # токен доступа к API для получения сведений о странах
 API_KEY_APILAYER = env("API_KEY_APILAYER")

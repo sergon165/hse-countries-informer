@@ -1,74 +1,143 @@
-version: '3.9'
+version: "3.9"
+
+networks:
+  favorite-places:
 
 services:
-  # основное приложение
-  app:
+  # основное приложение Django
+  countries-informer-app:
     build: .
+    container_name: countries-informer-app
     command: python manage.py runserver 0.0.0.0:8000
     ports:
-      - "8000:8000"
+      - "8020:8000"
     volumes:
       - ./src:/src
       - ./docs:/docs
-    depends_on:
-      - redis
-      - db
     env_file:
       - .env
+    restart: on-failure
+    networks:
+      - favorite-places
 
-  # база данных
-  db:
-    image: postgres:14-alpine
+  # СУБД PostgreSQL
+  countries-informer-db:
+    image: postgres:15-alpine
+    container_name: countries-informer-db
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "54321:5432"
+    # https://docs.docker.com/compose/compose-file/compose-file-v3/#healthcheck
+    healthcheck:
+      # https://www.postgresql.org/docs/current/app-pg-isready.html
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+    networks:
+      - favorite-places
 
-  # Redis
-  redis: 
+  # СУБД Redis (кэширование и брокер сообщений для Celery)
+  countries-informer-redis:
     image: redis:7-alpine
+    container_name: countries-informer-redis
     environment:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "6379:6379"
+    restart: on-failure
+    networks:
+      - favorite-places
 
-  # сервис распределенной очереди задач
-  celery:
+  # сервис распределенной очереди задач Celery
+  countries-informer-celery:
     build: .
+    container_name: countries-informer-celery
     command: celery -A app worker --loglevel=info
     volumes:
       - ./src:/src
-    depends_on:
-      - redis
-      - db
-      - app
     env_file:
       - .env
+    depends_on:
+      countries-informer-redis:
+        condition: service_started
+      countries-informer-db:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - favorite-places
 
-  # сервис для выполнения периодических заданий
-  celery-beat:
+  # сервис для выполнения периодических заданий Celery Beat
+  countries-informer-celery-beat:
     build: .
+    container_name: countries-informer-celery-beat
     command: celery -A app beat -l info -S django --pidfile=/tmp/celerybeat.pid --schedule=/tmp/celerybeat-schedule
     volumes:
       - ./src:/src
-    depends_on:
-      - redis
-      - db
-      - app
-      - celery
     env_file:
       - .env
+    depends_on:
+      countries-informer-redis:
+        condition: service_started
+      countries-informer-db:
+        condition: service_healthy
+      countries-informer-celery:
+        condition: service_started
     tmpfs: /tmp
+    restart: on-failure
+    networks:
+      - favorite-places
 
-  # мониторинг периодических задач
-  flower:
+  # мониторинг периодических задач Flower
+  countries-informer-flower:
     image: mher/flower:0.9.7
-    command: ["flower", "--broker=redis://redis:6379", "--port=5555"]
+    container_name: countries-informer-flower
+    command: ["flower", "--broker=redis://countries-informer-redis:6379", "--port=5555"]
     ports:
       - "5555:5555"
     depends_on:
-      - redis
+      countries-informer-redis:
+        condition: service_started
+    restart: on-failure
+    networks:
+      - favorite-places
+
+  # брокер сообщений RabbitMQ (коммуникации между микросервисами)
+  countries-informer-rabbitmq:
+    image: bitnami/rabbitmq:3.11.3
+    container_name: countries-informer-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_MANAGEMENT_SSL_VERIFY=verify_none
+    healthcheck:
+      test: rabbitmq-diagnostics -q check_virtual_hosts
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - favorite-places
+
+  # очередь для приема сообщений
+  countries-informer-consumer:
+    build: .
+    container_name: countries-informer-consumer
+    command: python manage.py runconsumer ${RABBITMQ_QUEUE_PLACES_IMPORT}
+    env_file:
+      - .env
+    depends_on:
+      countries-informer-rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - favorite-places
