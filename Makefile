@@ -6,15 +6,15 @@ build:
 
 # генерация документации
 docs-html:
-	docker-compose run --workdir /docs countries-informer-app /bin/bash -c "make html"
+	docker-compose run --no-deps --workdir /docs countries-informer-app /bin/bash -c "make html"
 
 # запуск форматирования кода
 format:
-	docker-compose run --workdir / countries-informer-app /bin/bash -c "black src docs/source/*.py; isort --profile black src/*.py docs/source/*.py"
+	docker-compose run --no-deps --workdir / countries-informer-app /bin/bash -c "black src docs/source/*.py; isort --profile black src/*.py docs/source/*.py"
 
 # запуск статического анализа кода (выявление ошибок типов и форматирования кода)
 lint:
-	docker-compose run --workdir / countries-informer-app /bin/bash -c "pylint --load-plugins pylint_django --load-plugins pylint_django.checkers.migrations --django-settings-module=app.settings src; flake8 src; mypy src; black --check src"
+	docker-compose run --no-deps --workdir / countries-informer-app /bin/bash -c "pylint --load-plugins pylint_django --load-plugins pylint_django.checkers.migrations --django-settings-module=app.settings src; flake8 src; mypy src; black --check src"
 
 # запуск автоматических тестов
 test:

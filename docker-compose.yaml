@@ -16,6 +16,9 @@ services:
       - ./docs:/docs
     env_file:
       - .env
+    depends_on:
+      countries-informer-db:
+        condition: service_healthy
     restart: on-failure
     networks:
       - favorite-places
