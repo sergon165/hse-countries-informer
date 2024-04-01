@@ -47,3 +47,15 @@ class CitySerializer(serializers.ModelSerializer):
             "longitude",
             "country",
         ]
+
+
+class WeatherSerializer(serializers.Serializer):
+    """
+    Сериализатор для данных о погоде.
+    """
+
+    temp = serializers.FloatField()
+    pressure = serializers.IntegerField()
+    humidity = serializers.IntegerField()
+    wind_speed = serializers.FloatField()
+    description = serializers.CharField()
