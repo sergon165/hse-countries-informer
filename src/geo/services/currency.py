@@ -10,7 +10,7 @@ class CurrencyService:
     Сервис для работы с данными о курсах валют.
     """
 
-    def get_currency(self, base: str) -> Optional[dict]:
+    def get_currency(self, base: str) -> Optional[CurrencyRatesDTO]:
         """
         Получение курса валюты.
 
@@ -19,6 +19,11 @@ class CurrencyService:
         """
 
         if data := CurrencyClient().get_rates(base):
-            return data
+            currency = CurrencyRatesDTO(
+                base=data["base"],
+                date=data["date"],
+                rates=data["rates"]
+            )
+            return currency
 
         return None

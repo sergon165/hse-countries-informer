@@ -59,3 +59,13 @@ class WeatherSerializer(serializers.Serializer):
     humidity = serializers.IntegerField()
     wind_speed = serializers.FloatField()
     description = serializers.CharField()
+
+
+class CurrencySerializer(serializers.Serializer):
+    """
+    Сериализатор для данных о курсах валют.
+    """
+
+    base = serializers.CharField()
+    date = serializers.DateField()
+    rates = serializers.DictField()

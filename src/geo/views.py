@@ -9,7 +9,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
 
 from app.settings import CACHE_WEATHER, CACHE_CURRENCY
-from geo.serializers import CountrySerializer, CitySerializer, WeatherSerializer
+from geo.serializers import CountrySerializer, CitySerializer, WeatherSerializer, CurrencySerializer
 from geo.services.city import CityService
 from geo.services.country import CountryService
 from geo.services.currency import CurrencyService
@@ -160,6 +160,7 @@ def get_currency(request: Request, base: str) -> JsonResponse:
             caches[CACHE_CURRENCY].set(cache_key, data)
 
     if data:
-        return JsonResponse(data)
+        serializer = CurrencySerializer(data)
+        return JsonResponse(serializer.data)
 
     raise NotFound
