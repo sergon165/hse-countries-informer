@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
+from rest_framework.settings import api_settings
 
 from app.settings import CACHE_WEATHER, CACHE_CURRENCY
 from geo.serializers import CountrySerializer, CitySerializer, WeatherSerializer, CurrencySerializer
@@ -65,8 +66,9 @@ def get_cities(request: Request) -> JsonResponse:
         )
 
     if cities := CityService().get_cities_by_codes(codes_set):
-        serializer = CitySerializer(cities, many=True)
-
+        paginator = api_settings.DEFAULT_PAGINATION_CLASS()
+        page = paginator.paginate_queryset(cities, request)
+        serializer = CitySerializer(page, many=True)
         return JsonResponse(serializer.data, safe=False)
 
     return JsonResponse([], safe=False)
@@ -112,8 +114,9 @@ def get_countries(request: Request) -> JsonResponse:
         )
 
     if countries := CountryService().get_countries_by_codes(codes_set):
-        serializer = CountrySerializer(countries, many=True)
-
+        paginator = api_settings.DEFAULT_PAGINATION_CLASS()
+        page = paginator.paginate_queryset(countries, request)
+        serializer = CountrySerializer(page, many=True)
         return JsonResponse(serializer.data, safe=False)
 
     return JsonResponse([], safe=False)
