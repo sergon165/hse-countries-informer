@@ -7,11 +7,18 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
+from rest_framework.settings import api_settings
 
-from app.settings import CACHE_WEATHER
-from geo.serializers import CountrySerializer, CitySerializer
+from app.settings import CACHE_WEATHER, CACHE_CURRENCY
+from geo.serializers import (
+    CountrySerializer,
+    CitySerializer,
+    WeatherSerializer,
+    CurrencySerializer,
+)
 from geo.services.city import CityService
 from geo.services.country import CountryService
+from geo.services.currency import CurrencyService
 from geo.services.shemas import CountryCityDTO
 from geo.services.weather import WeatherService
 
@@ -64,8 +71,9 @@ def get_cities(request: Request) -> JsonResponse:
         )
 
     if cities := CityService().get_cities_by_codes(codes_set):
-        serializer = CitySerializer(cities, many=True)
-
+        paginator = api_settings.DEFAULT_PAGINATION_CLASS()
+        page = paginator.paginate_queryset(cities, request)
+        serializer = CitySerializer(page, many=True)
         return JsonResponse(serializer.data, safe=False)
 
     return JsonResponse([], safe=False)
@@ -111,8 +119,9 @@ def get_countries(request: Request) -> JsonResponse:
         )
 
     if countries := CountryService().get_countries_by_codes(codes_set):
-        serializer = CountrySerializer(countries, many=True)
-
+        paginator = api_settings.DEFAULT_PAGINATION_CLASS()
+        page = paginator.paginate_queryset(countries, request)
+        serializer = CountrySerializer(page, many=True)
         return JsonResponse(serializer.data, safe=False)
 
     return JsonResponse([], safe=False)
@@ -136,11 +145,30 @@ def get_weather(request: Request, alpha2code: str, city: str) -> JsonResponse:
             caches[CACHE_WEATHER].set(cache_key, data)
 
     if data:
-        return JsonResponse(data)
+        serializer = WeatherSerializer(data)
+        return JsonResponse(serializer.data)
 
     raise NotFound
 
 
 @api_view(["GET"])
-def get_currency(*args: Any, **kwargs: Any) -> None:
-    pass
+def get_currency(request: Request, base: str) -> JsonResponse:
+    """
+    Получение информации о курсах валют.
+
+    :param Request request: Объект запроса
+    :param str base: Базовая валюта
+    :return:
+    """
+
+    cache_key = f"{base}"
+    data = caches[CACHE_CURRENCY].get(cache_key)
+    if not data:
+        if data := CurrencyService().get_currency(base=base):
+            caches[CACHE_CURRENCY].set(cache_key, data)
+
+    if data:
+        serializer = CurrencySerializer(data)
+        return JsonResponse(serializer.data)
+
+    raise NotFound
