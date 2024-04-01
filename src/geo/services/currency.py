@@ -20,9 +20,7 @@ class CurrencyService:
 
         if data := CurrencyClient().get_rates(base):
             currency = CurrencyRatesDTO(
-                base=data["base"],
-                date=data["date"],
-                rates=data["rates"]
+                base=data["base"], date=data["date"], rates=data["rates"]
             )
             return currency
 

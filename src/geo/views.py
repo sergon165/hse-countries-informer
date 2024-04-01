@@ -10,7 +10,12 @@ from rest_framework.request import Request
 from rest_framework.settings import api_settings
 
 from app.settings import CACHE_WEATHER, CACHE_CURRENCY
-from geo.serializers import CountrySerializer, CitySerializer, WeatherSerializer, CurrencySerializer
+from geo.serializers import (
+    CountrySerializer,
+    CitySerializer,
+    WeatherSerializer,
+    CurrencySerializer,
+)
 from geo.services.city import CityService
 from geo.services.country import CountryService
 from geo.services.currency import CurrencyService
@@ -149,12 +154,12 @@ def get_weather(request: Request, alpha2code: str, city: str) -> JsonResponse:
 @api_view(["GET"])
 def get_currency(request: Request, base: str) -> JsonResponse:
     """
-        Получение информации о курсах валют.
+    Получение информации о курсах валют.
 
-        :param Request request: Объект запроса
-        :param str base: Базовая валюта
-        :return:
-        """
+    :param Request request: Объект запроса
+    :param str base: Базовая валюта
+    :return:
+    """
 
     cache_key = f"{base}"
     data = caches[CACHE_CURRENCY].get(cache_key)

@@ -25,7 +25,7 @@ class WeatherService:
                 pressure=data["main"]["pressure"],
                 humidity=data["main"]["humidity"],
                 wind_speed=data["wind"]["speed"],
-                description=data["weather"][0]["description"]
+                description=data["weather"][0]["description"],
             )
             return weather
 

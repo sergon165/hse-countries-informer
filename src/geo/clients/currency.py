@@ -36,6 +36,4 @@ class CurrencyClient(BaseClient):
         :return:
         """
 
-        return self._request(
-            f"{self.get_base_url()}?base={base}"
-        )
+        return self._request(f"{self.get_base_url()}?base={base}")

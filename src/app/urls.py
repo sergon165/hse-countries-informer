@@ -33,6 +33,7 @@ schema_view = get_schema_view(  # pylint: disable=C0103
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/v1/news/", include("news.urls")),
     path("api/v1/", include("geo.urls")),
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
